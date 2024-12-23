@@ -1,6 +1,12 @@
 ################################################################################
 # Load Libraries & Data
 ################################################################################
+install.packages("xgboost")
+install.packages("dplyr")
+install.packages("caret")
+install.packages("devtools")
+devtools::install_github(repo = "saberpowers/sabRmetrics")
+
 library(dplyr)
 library(xgboost)
 library(caret)
@@ -18,6 +24,7 @@ savant_data <- savant_data %>%
          release_speed, launch_speed, launch_angle, arm_angle, delta_run_exp
          ) %>% 
   filter(!is.na(delta_run_exp))
+
 
 
 ################################################################################
@@ -48,25 +55,21 @@ dtest <- xgb.DMatrix(data = test_X, label = test_y)
 rm(train_X, train_y)
 
 
+
 ################################################################################
 # Train Model
 ################################################################################
-# Define Custom Callback for Iteration Progress
-cb.custom.print <- function() {
-  callback <- function(env) {
-    cat(sprintf("# Iteration(s): %d/%d\n", env$iteration, env$begin_iteration + env$num_boost_round - 1))
-  }
-  structure(callback, name = "cb.custom.print")
-}
+runtine <- system.time({
+  StuffModel <- xgb.train(data = dtrain,
+                          max.depth = 2,
+                          eta = 0.05,
+                          tree_method = "hist",
+                          nthread = 2,
+                          nrounds = 100,
+                          objective = "reg:squarederror",
+                          verbosity = 2)
+})
 
-StuffModel <- xgb.train(data = dtrain,
-                        max.depth = 2,
-                        eta = 0.05,
-                        tree_method = "hist",
-                        nthread = 2,
-                        nrounds = 100,
-                        objective = "reg:squarederror",
-                        verbosity = 2)
 
 
 ################################################################################
@@ -75,7 +78,7 @@ StuffModel <- xgb.train(data = dtrain,
 pred <- predict(StuffModel, test_X)
 err <- sqrt(mean((pred - test_y)^2)) # RMSE
 print(paste("RMSE: ", err))
-
+cat("Elapsed time:", runtime["elapsed"], "seconds\n")
 
 
 
